@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ErrorHandler, Injectable } from '@angular/core';
-import { MatSnackBar } from '@angular/material';
+import { MatSnackBar, MatSnackBarRef } from '@angular/material';
 import { RequestError } from '@octokit/request-error';
 import { FormErrorComponent } from '../../shared/error-toasters/form-error/form-error.component';
 import { GeneralMessageErrorComponent } from '../../shared/error-toasters/general-message-error/general-message-error.component';
@@ -14,6 +14,8 @@ const FILTERABLE = ['node_modules'];
   providedIn: 'root'
 })
 export class ErrorHandlingService implements ErrorHandler {
+  snackBarAutoCloseTime = 3000;
+
   constructor(private snackBar: MatSnackBar, private logger: LoggingService) {}
 
   handleError(error: HttpErrorResponse | Error | RequestError, actionCallback?: () => void) {
@@ -32,6 +34,12 @@ export class ErrorHandlingService implements ErrorHandler {
     }
   }
 
+  private addAutoClose<T>(snackBarRef: MatSnackBarRef<T>) {
+    setTimeout(() => {
+      snackBarRef.dismiss();
+    }, this.snackBarAutoCloseTime);
+  }
+
   private cleanStack(stacktrace: string): string {
     return stacktrace
       .split('\n')
@@ -41,6 +49,7 @@ export class ErrorHandlingService implements ErrorHandler {
 
   // Ref: https://developer.github.com/v3/#client-errors
   private handleHttpError(error: HttpErrorResponse | RequestError, actionCallback?: () => void): void {
+    let snackBarRef = null;
     // Angular treats 304 Not Modified as an error, we will ignore it.
     if (error.status === 304) {
       return;
@@ -53,23 +62,29 @@ export class ErrorHandlingService implements ErrorHandler {
 
     switch (error.status) {
       case 500: // Internal Server Error.
-        this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: error });
+        snackBarRef = this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: error });
         break;
       case 422: // Form errors
-        this.snackBar.openFromComponent(FormErrorComponent, { data: error });
+        snackBarRef = this.snackBar.openFromComponent(FormErrorComponent, { data: error });
         break;
       case 400: // Bad request
       case 401: // Unauthorized
       case 404: // Not found
-        this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: error });
+        snackBarRef = this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: error });
         break;
       default:
-        this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: error });
+        snackBarRef = this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: error });
         return;
+    }
+    if (snackBarRef) {
+      this.addAutoClose(snackBarRef);
     }
   }
 
   private handleGeneralError(error: string): void {
-    this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: { message: error } });
+    let snackBarRef = this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: { message: error } });
+    if (snackBarRef) {
+      this.addAutoClose(snackBarRef);
+    }
   }
 }
