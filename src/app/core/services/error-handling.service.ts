@@ -82,7 +82,7 @@ export class ErrorHandlingService implements ErrorHandler {
   }
 
   private handleGeneralError(error: string): void {
-    let snackBarRef = this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: { message: error } });
+    const snackBarRef = this.snackBar.openFromComponent(GeneralMessageErrorComponent, { data: { message: error } });
     if (snackBarRef) {
       this.addAutoClose(snackBarRef);
     }
